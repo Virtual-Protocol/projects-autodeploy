@@ -32,6 +32,9 @@ retry() {
 
 step() { printf '\n== %s\n' "$1"; }
 
+# Whatever gcloud refuses, the portal shows this rather than only "stopped".
+trap 'echo "::error::Setting up Google Cloud failed (scripts/provision.sh line $LINENO). A platform engineer can see why under Details."' ERR
+
 step "Is the name free?"
 if current=$(gcloud run services describe "$NAME" --project "$PROJECT_ID" --region "$REGION" \
   --format 'value(metadata.labels.repo)' 2>/dev/null); then
