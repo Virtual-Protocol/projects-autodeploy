@@ -288,7 +288,8 @@ for (const mw of ["middleware.ts", "middleware.js", "src/middleware.ts", "src/mi
     warn(`${mw} doesn't mention ${healthPath}. Make sure it doesn't redirect the health check to a login page`);
 }
 
-const timers = findInCode(/\bsetInterval\s*\(/);
+// Browser code ("use client") can poll on a timer; only server timers matter.
+const timers = findInCode(/\bsetInterval\s*\(/).filter((hit) => !/^\s*["']use client["']/.test(code.get(hit.split(":")[0])));
 if (deps["node-cron"] || deps.cron || timers.length)
   warn(`scheduled work found (${deps["node-cron"] ? "node-cron" : deps.cron ? "cron" : timers.join(", ")}). Cloud Run pauses idle apps, so timers don't run reliably; ask the platform team for a schedule`);
 
