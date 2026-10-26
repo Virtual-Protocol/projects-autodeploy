@@ -2,7 +2,7 @@
 # Creates what one app needs on Google Cloud, so its repo can deploy. Runs in
 # host-app.yml after the request and platform.yaml checks. Safe to re-run.
 #
-# Needs: NAME REPO REQUESTED_BY DATA_CLASS STORAGE
+# Needs: NAME REPO REQUESTED_BY DATA_CLASS STORAGE PUBLIC
 #        PROJECT_ID PROJECT_NUMBER REGION DOMAIN DEPLOYER_SA
 set -euo pipefail
 
@@ -69,32 +69,46 @@ if [[ "$STORAGE" == true ]]; then
     --member "serviceAccount:$RUN_SA" --role roles/storage.objectAdmin >/dev/null
 fi
 
-step "The Cloud Run service, behind Google sign-in"
-labels="managed-by=projects-autodeploy,repo=$repo_label,owner=$owner_label,data=$DATA_CLASS"
+if [[ "$PUBLIC" == true ]]; then
+  # Approved in public-apps.txt (read-platform.sh checked). Turning off
+  # Cloud Run's invoker check opens it without granting anything to allUsers.
+  step "The Cloud Run service, open to everyone"
+  access=public
+  access_flags=(--no-iap --no-invoker-iam-check)
+  audience="anyone, no sign-in"
+else
+  step "The Cloud Run service, behind Google sign-in"
+  access=company
+  access_flags=(--iap --invoker-iam-check)
+  audience="anyone with a @$DOMAIN Google account"
+fi
+labels="managed-by=projects-autodeploy,repo=$repo_label,owner=$owner_label,data=$DATA_CLASS,access=$access"
 if [[ "$exists" == false ]]; then
   # Google's sample page holds the name until the app's first deploy.
   retry gcloud run deploy "$NAME" --project "$PROJECT_ID" --region "$REGION" \
     --image us-docker.pkg.dev/cloudrun/container/hello \
     --service-account "$RUN_SA" \
-    --no-allow-unauthenticated --iap \
+    --no-allow-unauthenticated "${access_flags[@]}" \
     --labels "$labels"
 else
   gcloud run services update "$NAME" --project "$PROJECT_ID" --region "$REGION" \
-    --iap --update-labels "$labels" >/dev/null
+    "${access_flags[@]}" --update-labels "$labels" >/dev/null
 fi
-gcloud run services add-iam-policy-binding "$NAME" --project "$PROJECT_ID" --region "$REGION" \
-  --member "serviceAccount:service-$PROJECT_NUMBER@gcp-sa-iap.iam.gserviceaccount.com" \
-  --role roles/run.invoker >/dev/null
-gcloud iap web add-iam-policy-binding --project "$PROJECT_ID" --region "$REGION" \
-  --resource-type cloud-run --service "$NAME" \
-  --member "domain:$DOMAIN" --role roles/iap.httpsResourceAccessor >/dev/null
+if [[ "$PUBLIC" != true ]]; then
+  gcloud run services add-iam-policy-binding "$NAME" --project "$PROJECT_ID" --region "$REGION" \
+    --member "serviceAccount:service-$PROJECT_NUMBER@gcp-sa-iap.iam.gserviceaccount.com" \
+    --role roles/run.invoker >/dev/null
+  gcloud iap web add-iam-policy-binding --project "$PROJECT_ID" --region "$REGION" \
+    --resource-type cloud-run --service "$NAME" \
+    --member "domain:$DOMAIN" --role roles/iap.httpsResourceAccessor >/dev/null
+fi
 
 url=$(gcloud run services describe "$NAME" --project "$PROJECT_ID" --region "$REGION" --format 'value(status.url)')
 
 cat >> "$GITHUB_STEP_SUMMARY" <<EOF
 ### Hosted $NAME
 
-$url (anyone with a @$DOMAIN Google account)
+$url ($audience)
 
 Next:
 1. Add the app's secrets in the $REPO repo: Settings > Secrets and variables > Actions. Use the names in its .env.example.

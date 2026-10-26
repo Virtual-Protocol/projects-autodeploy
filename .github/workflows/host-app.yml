@@ -71,6 +71,7 @@ jobs:
       - name: Check platform.yaml against the request
         id: app
         env:
+          REPO: ${{ inputs.repo }}
           REQUESTED_BY: ${{ inputs.requested_by }}
         run: scripts/read-platform.sh app
 
@@ -85,6 +86,7 @@ jobs:
         env:
           NAME: ${{ steps.app.outputs.name }}
           STORAGE: ${{ steps.app.outputs.storage }}
+          PUBLIC: ${{ steps.app.outputs.public }}
           REPO: ${{ inputs.repo }}
           REQUESTED_BY: ${{ inputs.requested_by }}
           DATA_CLASS: ${{ inputs.data_class }}

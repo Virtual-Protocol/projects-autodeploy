@@ -1,0 +1,10 @@
+# Apps anyone on the internet may open, with no Google sign-in.
+#
+# Hosting an app whose platform.yaml says "public: true" is refused unless the
+# app is listed here, and changes to this file need a platform engineer's
+# review like any change to main. Only list apps built for the public, such as
+# a customer support page, never an internal tool.
+#
+# One app per line: <app name> <repo in Virtual-Protocol>
+
+acp-ticket-cms acp-ticket-cms

@@ -6,6 +6,8 @@ Hosts Virtuals' internal apps on Google Cloud Run, so anyone who builds a tool
 - **Where apps run:** Cloud Run in `asia-southeast1`, project `virtuals-internal-apps`.
 - **Who can open them:** anyone signed in with a `@virtuals.io` Google account.
   Google checks this (Identity-Aware Proxy) before a request reaches the app.
+  The few apps built for the public, such as the support portal, are open to
+  everyone instead, once approved in [`public-apps.txt`](public-apps.txt).
 - **How they deploy:** every push to the app repo's `main` builds and deploys it,
   in about 3 minutes.
 
@@ -35,6 +37,7 @@ A request is refused unless all of these hold:
 | `owner` in the repo's `platform.yaml` is the person asking | Only someone who can push to the repo could have written that |
 | The app passes [the checker](actions/check/check.mjs) | It will deploy and run as expected |
 | The app name isn't used by another repo | Names are the service's and secrets' names |
+| A `public: true` app is listed in [`public-apps.txt`](public-apps.txt) | Opening an app to the internet needs a platform engineer's review |
 
 Deploys check again that the app was hosted from the same repo, so one repo
 can't deploy over another's app.
@@ -47,13 +50,16 @@ An app is one Node.js container that:
 - listens on `process.env.PORT`
 - answers its health check (`/api/health` by default) with 200, without login or
   database calls
-- keeps no state on local disk: files go to Cloud Storage (`needs.storage`)
+- keeps no state on local disk: files go to Cloud Storage (`needs.storage`). An
+  app that already saves files to a folder can have its bucket appear as that
+  folder (`needs.storage_folder`)
 - lists every env var it reads in `.env.example`, with fake values
 - commits no secrets and no cloud keys: it gets Google access from its own
   service account
 
 Not available yet, so ask the platform team: Postgres, Redis, scheduled jobs,
-public (no sign-in) apps, custom domains, anything bigger than `medium`.
+custom domains, anything bigger than `medium`. Public (no sign-in) apps need
+the platform team to add them to [`public-apps.txt`](public-apps.txt).
 
 ## Security
 

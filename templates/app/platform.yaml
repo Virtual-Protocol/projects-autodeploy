@@ -6,6 +6,12 @@ owner: someone@virtuals.io   # who owns the app; only this person can host it
 port: 3000              # the port the app listens on (it also receives this as PORT)
 healthcheck: /api/health  # returns 200 fast, without login or database calls
 size: small             # small = 1 vCPU / 1 GB, up to 3 copies | medium = 2 vCPU / 2 GB, up to 5
+# max_copies: 1         # optional: fewer copies than the size allows, e.g. 1 for an app
+                        # whose copies would clash over files in its storage folder
+# public: true          # optional: anyone on the internet can open it, with no sign-in.
+                        # Only for apps the platform team approves (public-apps.txt).
 
 needs:
   storage: false        # true -> a private Cloud Storage bucket, its name in STORAGE_BUCKET
+  # storage_folder: /app/uploads   # optional, with storage: true -> the bucket also appears
+                                   # as this folder, for apps that save files to disk

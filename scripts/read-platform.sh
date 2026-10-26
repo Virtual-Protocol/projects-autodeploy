@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Reads the app's platform.yaml and checks it against the request: the person
 # asking must be the owner the repo names, which only someone who can push to
-# the repo could have written there.
+# the repo could have written there, and a public app must be on the reviewed
+# list in public-apps.txt.
 #   scripts/read-platform.sh <app dir>
 set -euo pipefail
 
@@ -37,8 +38,17 @@ done
 storage=$(field .needs.storage)
 [[ "$storage" == true ]] || storage=false
 
+public=$(field .public)
+if [[ "$public" == true ]]; then
+  awk -v name="$name" -v repo="$REPO" '$1 == name && $2 == repo { found = 1 } END { exit !found }' public-apps.txt ||
+    fail "platform.yaml says public: true, but \"$name\" isn't an approved public app. Public apps need the platform team's approval: ask them to add it to public-apps.txt in projects-autodeploy."
+else
+  public=false
+fi
+
 {
   echo "name=$name"
   echo "storage=$storage"
+  echo "public=$public"
 } >> "$GITHUB_OUTPUT"
-echo "platform.yaml checks passed: $name, owned by $owner."
+echo "platform.yaml checks passed: $name, owned by $owner$([[ "$public" == true ]] && echo ", public")."
