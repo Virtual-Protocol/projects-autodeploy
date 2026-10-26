@@ -2,12 +2,18 @@
 # Creates what one app needs on Google Cloud, so its repo can deploy. Runs in
 # host-app.yml after the request and platform.yaml checks. Safe to re-run.
 #
-# Needs: NAME REPO REQUESTED_BY DATA_CLASS STORAGE PUBLIC
+# Needs: NAME REPO REQUESTED_BY DATA_CLASS STORAGE PUBLIC SECRETS VARIABLES
 #        PROJECT_ID PROJECT_NUMBER REGION DOMAIN DEPLOYER_SA
+# Optional: PLACEHOLDER_IMAGE, the next-steps page (placeholder/) to show
+#        until the first deploy; Google's sample page without it.
 set -euo pipefail
 
 RUN_SA="app-$NAME@$PROJECT_ID.iam.gserviceaccount.com"
 BUCKET="$PROJECT_ID-$NAME"
+GOOGLE_SAMPLE=us-docker.pkg.dev/cloudrun/container/hello
+PLACEHOLDER_IMAGE="${PLACEHOLDER_IMAGE:-$GOOGLE_SAMPLE}"
+# What the next-steps page shows. Names only, never values.
+placeholder_env="^|^APP_NAME=$NAME|REPO=$REPO|SECRETS=$SECRETS|VARIABLES=$VARIABLES"
 
 # Label values: lowercase letters, digits, _ and -, at most 63 characters.
 label() { tr '[:upper:]' '[:lower:]' <<<"$1" | tr -c 'a-z0-9_\n-' '_' | cut -c1-63; }
@@ -84,15 +90,22 @@ else
 fi
 labels="managed-by=projects-autodeploy,repo=$repo_label,owner=$owner_label,data=$DATA_CLASS,access=$access"
 if [[ "$exists" == false ]]; then
-  # Google's sample page holds the name until the app's first deploy.
+  # The next-steps page holds the name until the app's first deploy.
   retry gcloud run deploy "$NAME" --project "$PROJECT_ID" --region "$REGION" \
-    --image us-docker.pkg.dev/cloudrun/container/hello \
+    --image "$PLACEHOLDER_IMAGE" --set-env-vars "$placeholder_env" \
     --service-account "$RUN_SA" \
     --no-allow-unauthenticated "${access_flags[@]}" \
     --labels "$labels"
 else
   gcloud run services update "$NAME" --project "$PROJECT_ID" --region "$REGION" \
     "${access_flags[@]}" --update-labels "$labels" >/dev/null
+  # Never deployed yet: bring its next-steps page up to date.
+  image=$(gcloud run services describe "$NAME" --project "$PROJECT_ID" --region "$REGION" \
+    --format 'value(spec.template.spec.containers[0].image)')
+  if [[ "$image" == "$GOOGLE_SAMPLE"* || "$image" == */platform/placeholder:* ]]; then
+    gcloud run services update "$NAME" --project "$PROJECT_ID" --region "$REGION" \
+      --image "$PLACEHOLDER_IMAGE" --set-env-vars "$placeholder_env" >/dev/null
+  fi
 fi
 if [[ "$PUBLIC" != true ]]; then
   gcloud run services add-iam-policy-binding "$NAME" --project "$PROJECT_ID" --region "$REGION" \
@@ -111,8 +124,13 @@ cat >> "$GITHUB_STEP_SUMMARY" <<EOF
 $url ($audience)
 
 Next:
-1. Add the app's secrets in the $REPO repo: Settings > Secrets and variables > Actions. Use the names in its .env.example.
+1. Add the app's secrets in the $REPO repo (Settings > Secrets and variables > Actions): ${SECRETS:-none}${VARIABLES:+. Variables: $VARIABLES}
 2. Deploy: merge to main, or run the Deploy workflow from the repo's Actions tab.
 EOF
-# The bizops portal reads this notice to show the person their app's address.
+# The bizops portal reads these notices to show the person their app's
+# address and what to set up before deploying.
 echo "::notice title=Hosted::$url"
+echo "::notice title=Secrets::Secrets to add: ${SECRETS:-none}"
+if [[ -n "$VARIABLES" ]]; then
+  echo "::notice title=Variables::Variables to add: $VARIABLES"
+fi

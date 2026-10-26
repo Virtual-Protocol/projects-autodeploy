@@ -46,9 +46,18 @@ else
   public=false
 fi
 
+# What the owner sets on GitHub before the first deploy, named as deploy-app.yml
+# reads them from .env.example: public values are variables, the rest secrets.
+keys=$(sed -nE 's/^([A-Za-z_][A-Za-z0-9_]*)=.*/\1/p' "$dir/.env.example" 2>/dev/null |
+  grep -vxE 'PORT|NODE_ENV|APP_URL|STORAGE_BUCKET|GOOGLE_CLOUD_PROJECT' | sort -u || true)
+secrets=$(grep -vE '^(NEXT_PUBLIC_|VITE_)' <<<"$keys" | paste -sd, - || true)
+variables=$(grep -E '^(NEXT_PUBLIC_|VITE_)' <<<"$keys" | paste -sd, - || true)
+
 {
   echo "name=$name"
   echo "storage=$storage"
   echo "public=$public"
+  echo "secrets=$secrets"
+  echo "variables=$variables"
 } >> "$GITHUB_OUTPUT"
 echo "platform.yaml checks passed: $name, owned by $owner$([[ "$public" == true ]] && echo ", public")."
