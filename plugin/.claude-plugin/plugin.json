@@ -1,7 +1,7 @@
 {
   "name": "virtuals-platform",
   "description": "How to build internal apps that host on the Virtuals platform (Google Cloud Run, through projects-autodeploy): rules, templates and a checker",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "author": { "name": "Virtuals Protocol" },
   "repository": "https://github.com/Virtual-Protocol/projects-autodeploy"
 }

@@ -17,17 +17,21 @@ Hosts Virtuals' internal apps on Google Cloud Run, so anyone who builds a tool
    ([`plugin/`](plugin), see "The Claude plugin") does this, and adds the files from
    [`templates/app/`](templates/app). The bizops portal's **Tech requests → Build an
    app** page walks a builder through it.
-2. **Host it.** Use the **Host an app** form in the bizops portal. It runs
+2. **Get a repo, with its secrets.** When the app is ready, the platform team creates a
+   private repo in `Virtual-Protocol`, adds the builder (who pushes the code), and adds
+   its secrets (Settings > Secrets and variables > Actions), named as in its
+   `.env.example`. Only repo admins can set secrets, so the builder sends the values
+   through a password manager share. Public values (`NEXT_PUBLIC_*`, `VITE_*`) go under
+   Variables instead.
+3. **Host it.** Use the **Host an app** form in the bizops portal. It runs
    [`host-app.yml`](.github/workflows/host-app.yml), which checks the request and
    creates the app's Cloud Run service, its own service account and, if asked
    for, a storage bucket. Until its first deploy, the app's address shows a
    page ([`placeholder/`](placeholder)) listing what's left to do, with links.
-3. **Add its secrets** in the app repo's GitHub settings (Settings > Secrets and
-   variables > Actions), using the names in its `.env.example`. Public values
-   (`NEXT_PUBLIC_*`, `VITE_*`) go under Variables instead.
-4. **Merge to `main`** (or run the repo's Deploy workflow). The app repo's
+4. **Deploy:** run the repo's Deploy workflow, or merge to `main`. The app repo's
    `deploy.yml` calls [`deploy-app.yml`](.github/workflows/deploy-app.yml), which
-   builds the image, copies the secrets into Secret Manager and deploys.
+   builds the image, copies the secrets into Secret Manager and deploys. A deploy
+   before hosting fails ("isn't hosted yet"): hosting creates the app's place to run.
 
 ## What hosting checks
 
