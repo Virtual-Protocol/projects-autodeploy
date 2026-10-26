@@ -2,7 +2,9 @@
 # portal starts this; platform engineers can also run it from the Actions tab.
 # Running it again for an app that's already hosted only re-checks its settings.
 name: Host an app
-run-name: Host ${{ inputs.repo }} for ${{ inputs.requested_by }}
+# The request id, when given, makes each run's title unique, so the portal can
+# find exactly the run it started.
+run-name: Host ${{ inputs.repo }} for ${{ inputs.requested_by }}${{ inputs.request_id && format(' [{0}]', inputs.request_id) || '' }}
 
 on:
   workflow_dispatch:
@@ -18,6 +20,10 @@ on:
         type: choice
         options: [none, internal, personal]
         default: internal
+      request_id:
+        description: Set by the bizops portal to find this run again. Leave empty when running by hand
+        required: false
+        default: ""
 
 concurrency:
   group: host-app-${{ inputs.repo }}
