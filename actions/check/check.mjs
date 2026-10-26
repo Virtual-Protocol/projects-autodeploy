@@ -118,9 +118,9 @@ if (!yamlText) {
 }
 
 if (cfg) {
-  const known = new Set(["name", "owner", "port", "healthcheck", "size", "needs"]);
+  const known = new Set(["name", "owner", "port", "healthcheck", "size", "max_copies", "public", "needs"]);
   for (const k of Object.keys(cfg)) {
-    if (k === "audience") warn("platform.yaml: audience isn't used. Every app is behind Google sign-in; public apps need the platform team");
+    if (k === "audience") warn("platform.yaml: audience isn't used. Apps are behind Google sign-in unless public: true, which needs the platform team's approval");
     else if (!known.has(k)) warn(`platform.yaml: unknown key "${k}" (ignored)`);
   }
 
@@ -142,11 +142,25 @@ if (cfg) {
   cfg.size ??= "small";
   if (!["small", "medium"].includes(cfg.size)) err(`platform.yaml: size must be small or medium, not "${cfg.size}"`);
 
+  if (cfg.max_copies !== undefined) {
+    const most = cfg.size === "medium" ? 5 : 3;
+    if (!Number.isInteger(cfg.max_copies) || cfg.max_copies < 1 || cfg.max_copies > most)
+      err(`platform.yaml: max_copies must be a number from 1 to ${most} for size ${cfg.size}`);
+  }
+
+  cfg.public ??= false;
+  if (typeof cfg.public !== "boolean") err("platform.yaml: public must be true or false");
+  else if (cfg.public) warn("platform.yaml: public: true opens the app to anyone, with no sign-in. Hosting refuses it unless the platform team has approved the app in public-apps.txt");
+
   cfg.needs ??= {};
   if (typeof cfg.needs !== "object") err("platform.yaml: needs must be a section (storage: true/false)");
   else
     for (const [k, v] of Object.entries(cfg.needs)) {
-      if (typeof v !== "boolean") err(`platform.yaml: needs.${k} must be true or false`);
+      if (k === "storage_folder") {
+        if (typeof v !== "string" || !/^\/[A-Za-z0-9._/-]+$/.test(v) || v.includes(".."))
+          err("platform.yaml: needs.storage_folder must be a folder path like /app/uploads");
+        else if (cfg.needs.storage !== true) err("platform.yaml: needs.storage_folder needs storage: true");
+      } else if (typeof v !== "boolean") err(`platform.yaml: needs.${k} must be true or false`);
       else if (k === "postgres" || k === "redis") {
         if (v) err(`platform.yaml: needs.${k} isn't available yet. Ask the platform team`);
       } else if (k !== "storage") err(`platform.yaml: needs.${k} isn't something the platform provides`);
@@ -303,13 +317,17 @@ for (const s of ["start", "prestart", "build", "postinstall"]) {
   if (/db push|migrate reset|accept-data-loss|force-reset/.test(scripts[s] || "")) err(`package.json "${s}" runs a destructive database command: ${scripts[s]}`);
 }
 
+const storageFolder = needs.storage === true && typeof needs.storage_folder === "string" ? needs.storage_folder : null;
 const diskUploads = findInCode(/multer\.diskStorage|multer\(\s*\{\s*dest\s*:|express\.static\(\s*['"`][^'"`]*upload/i);
-if (diskUploads.length) err(`files are saved to local disk (${diskUploads.join(", ")}). The disk is wiped on every deploy: use needs.storage (Cloud Storage)`);
+if (diskUploads.length && storageFolder)
+  warn(`files are saved to disk (${diskUploads.join(", ")}). Make sure they go under ${storageFolder}, the storage folder: everything else is wiped on every deploy`);
+else if (diskUploads.length) err(`files are saved to local disk (${diskUploads.join(", ")}). The disk is wiped on every deploy: use needs.storage (Cloud Storage)`);
 const diskWrites = findInCode(/\bfs\.(writeFile|writeFileSync|appendFile|appendFileSync|createWriteStream|mkdirSync)\s*\(/).filter((h) => {
   const [f, line] = h.split(":");
   return !/tmpdir|['"`]\/tmp/.test(code.get(f).split("\n")[Number(line) - 1]);
 });
-if (diskWrites.length) warn(`writes to local disk (${diskWrites.join(", ")}). Anything that must survive a restart belongs in a database or Cloud Storage`);
+if (diskWrites.length)
+  warn(`writes to local disk (${diskWrites.join(", ")}). Anything that must survive a restart belongs in a database or Cloud Storage${storageFolder ? ` (${storageFolder})` : ""}`);
 if (deps["@aws-sdk/client-s3"]) warn("uses S3. On this platform, files go to Cloud Storage: set needs.storage and use @google-cloud/storage");
 if (deps["@google-cloud/storage"] && !needs.storage && cfg) warn("uses Cloud Storage but needs.storage isn't true");
 if (deps.bullmq || deps.ioredis || deps.redis) warn("uses Redis. Redis isn't available on the platform yet: ask the platform team");

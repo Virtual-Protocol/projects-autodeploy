@@ -34,10 +34,25 @@ jobs:
           health=$(yq -r '.healthcheck // "/api/health"' platform.yaml)
           size=$(yq -r '.size // "small"' platform.yaml)
           storage=$(yq -r '.needs.storage // false' platform.yaml)
+          folder=$(yq -r '.needs.storage_folder // ""' platform.yaml)
+          copies=$(yq -r '.max_copies // ""' platform.yaml)
           case "$size" in
             medium) cpu=2; memory=2Gi; max=5 ;;
             *) cpu=1; memory=1Gi; max=3 ;;
           esac
+          # The checker has already explained these; this only keeps odd
+          # values out of the deploy command.
+          if [[ -n "$folder" && ( "$storage" != true || ! "$folder" =~ ^/[A-Za-z0-9._/-]+$ || "$folder" == *..* ) ]]; then
+            echo "::error::needs.storage_folder must be a folder path like /app/uploads, with needs.storage: true"
+            exit 1
+          fi
+          if [[ -n "$copies" ]]; then
+            if [[ ! "$copies" =~ ^[0-9]+$ ]] || (( copies < 1 || copies > max )); then
+              echo "::error::max_copies must be a number from 1 to $max for size $size"
+              exit 1
+            fi
+            max=$copies
+          fi
           {
             echo "name=$name"
             echo "port=$port"
@@ -46,6 +61,7 @@ jobs:
             echo "memory=$memory"
             echo "max=$max"
             echo "storage=$storage"
+            echo "folder=$folder"
           } >> "$GITHUB_OUTPUT"
 
       - name: Public build settings from the repo's GitHub variables
@@ -143,9 +159,11 @@ jobs:
           MEMORY: ${{ steps.app.outputs.memory }}
           MAX: ${{ steps.app.outputs.max }}
           STORAGE: ${{ steps.app.outputs.storage }}
+          FOLDER: ${{ steps.app.outputs.folder }}
           MAPPING: ${{ steps.secrets.outputs.mapping }}
         run: |
           url=$(gcloud run services describe "$NAME" --project "$PROJECT_ID" --region "$REGION" --format 'value(status.url)')
+          access=$(gcloud run services describe "$NAME" --project "$PROJECT_ID" --region "$REGION" --format 'value(metadata.labels.access)')
           envs="APP_URL=$url|GOOGLE_CLOUD_PROJECT=$PROJECT_ID"
           if [[ "$STORAGE" == true ]]; then
             envs="$envs|STORAGE_BUCKET=$PROJECT_ID-$NAME"
@@ -168,12 +186,27 @@ jobs:
           else
             args+=(--clear-secrets)
           fi
-          # Who can reach the app (Google sign-in) was set when it was hosted
-          # and is left as it is.
+          # The app's bucket can also appear as a folder, for apps that save
+          # files to disk. Cleared first, so removing the folder takes effect.
+          args+=(--clear-volume-mounts --clear-volumes)
+          if [[ -n "$FOLDER" ]]; then
+            args+=(
+              --execution-environment gen2
+              --add-volume "name=storage,type=cloud-storage,bucket=$PROJECT_ID-$NAME"
+              --add-volume-mount "volume=storage,mount-path=$FOLDER"
+            )
+          fi
+          # Who can reach the app (Google sign-in, or public if approved) was
+          # set when it was hosted and is left as it is.
           gcloud run deploy "$NAME" "${args[@]}"
 
+          if [[ "$access" == public ]]; then
+            audience="public: anyone can open it"
+          else
+            audience="sign in with a @virtuals.io Google account"
+          fi
           {
             echo "### Deployed $NAME"
             echo
-            echo "$url (sign in with a @virtuals.io Google account)"
+            echo "$url ($audience)"
           } >> "$GITHUB_STEP_SUMMARY"
