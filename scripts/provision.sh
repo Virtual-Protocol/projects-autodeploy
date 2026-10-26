@@ -97,4 +97,5 @@ Next:
 1. Add the app's secrets in the $REPO repo: Settings > Secrets and variables > Actions. Use the names in its .env.example.
 2. Deploy: merge to main, or run the Deploy workflow from the repo's Actions tab.
 EOF
-echo "Hosted $NAME at $url"
+# The bizops portal reads this notice to show the person their app's address.
+echo "::notice title=Hosted::$url"
