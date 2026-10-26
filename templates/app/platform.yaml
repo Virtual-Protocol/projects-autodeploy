@@ -1,0 +1,11 @@
+# Read by projects-autodeploy. Keep it accurate.
+
+name: my-app            # 3-24 lowercase letters, digits and single dashes. It names the
+                        # Cloud Run service and its secrets. Never change it once hosted.
+owner: someone@virtuals.io   # who owns the app; only this person can host it
+port: 3000              # the port the app listens on (it also receives this as PORT)
+healthcheck: /api/health  # returns 200 fast, without login or database calls
+size: small             # small = 1 vCPU / 1 GB, up to 3 copies | medium = 2 vCPU / 2 GB, up to 5
+
+needs:
+  storage: false        # true -> a private Cloud Storage bucket, its name in STORAGE_BUCKET

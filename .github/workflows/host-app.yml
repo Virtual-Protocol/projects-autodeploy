@@ -1,0 +1,85 @@
+# Sets up a new app so it can deploy. The "Host an app" form in the bizops
+# portal starts this; platform engineers can also run it from the Actions tab.
+# Running it again for an app that's already hosted only re-checks its settings.
+name: Host an app
+run-name: Host ${{ inputs.repo }} for ${{ inputs.requested_by }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      repo:
+        description: Repository in Virtual-Protocol (name only, e.g. internal-bizops-tool)
+        required: true
+      requested_by:
+        description: Email of the person asking. Must match owner in the app's platform.yaml
+        required: true
+      data_class:
+        description: What the app holds
+        type: choice
+        options: [none, internal, personal]
+        default: internal
+
+concurrency:
+  group: host-app-${{ inputs.repo }}
+  cancel-in-progress: false
+
+env:
+  PROJECT_ID: virtuals-internal-apps
+  PROJECT_NUMBER: "912665393140"
+  REGION: asia-southeast1
+  DOMAIN: virtuals.io
+  WIF_PROVIDER: projects/912665393140/locations/global/workloadIdentityPools/github/providers/autodeploy
+  PROVISIONER_SA: autodeploy-provisioner@virtuals-internal-apps.iam.gserviceaccount.com
+  DEPLOYER_SA: autodeploy-deployer@virtuals-internal-apps.iam.gserviceaccount.com
+
+jobs:
+  host:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+
+      # Inputs come from a form, so they are only ever passed as environment
+      # variables and are validated before anything uses them.
+      - name: Check the request
+        env:
+          REPO: ${{ inputs.repo }}
+          REQUESTED_BY: ${{ inputs.requested_by }}
+          GH_TOKEN: ${{ secrets.ORG_READ_TOKEN }}
+        run: scripts/check-request.sh
+
+      - uses: actions/checkout@v7
+        with:
+          repository: Virtual-Protocol/${{ inputs.repo }}
+          token: ${{ secrets.ORG_READ_TOKEN }}
+          path: app
+          persist-credentials: false
+
+      - name: Check the app follows the platform rules
+        uses: ./actions/check
+        with:
+          path: app
+
+      - name: Check platform.yaml against the request
+        id: app
+        env:
+          REQUESTED_BY: ${{ inputs.requested_by }}
+        run: scripts/read-platform.sh app
+
+      - uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.PROVISIONER_SA }}
+
+      - uses: google-github-actions/setup-gcloud@v3
+
+      - name: Set up the app on Google Cloud
+        env:
+          NAME: ${{ steps.app.outputs.name }}
+          STORAGE: ${{ steps.app.outputs.storage }}
+          REPO: ${{ inputs.repo }}
+          REQUESTED_BY: ${{ inputs.requested_by }}
+          DATA_CLASS: ${{ inputs.data_class }}
+        run: scripts/provision.sh

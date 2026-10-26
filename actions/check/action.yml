@@ -1,0 +1,13 @@
+name: Check app
+description: Checks an app repo against the projects-autodeploy rules. Fails on errors.
+inputs:
+  path:
+    description: The app repo's folder
+    default: .
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        APP_DIR: ${{ inputs.path }}
+      run: node "$GITHUB_ACTION_PATH/check.mjs" "$APP_DIR"

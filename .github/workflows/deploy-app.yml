@@ -1,0 +1,179 @@
+# Builds an app repo and deploys it to Cloud Run. App repos call this from
+# their own .github/workflows/deploy.yml (templates/app/deploy.yml) on every
+# push to main. Only apps set up through "Host an app" can deploy.
+name: Deploy app
+
+on:
+  workflow_call:
+
+env:
+  PROJECT_ID: virtuals-internal-apps
+  PROJECT_NUMBER: "912665393140"
+  REGION: asia-southeast1
+  REGISTRY: asia-southeast1-docker.pkg.dev/virtuals-internal-apps/apps
+  WIF_PROVIDER: projects/912665393140/locations/global/workloadIdentityPools/github/providers/autodeploy
+  DEPLOYER_SA: autodeploy-deployer@virtuals-internal-apps.iam.gserviceaccount.com
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Check the app follows the platform rules
+        uses: Virtual-Protocol/projects-autodeploy/actions/check@main
+
+      - name: Read platform.yaml
+        id: app
+        run: |
+          name=$(yq -r '.name' platform.yaml)
+          port=$(yq -r '.port // 3000' platform.yaml)
+          health=$(yq -r '.healthcheck // "/api/health"' platform.yaml)
+          size=$(yq -r '.size // "small"' platform.yaml)
+          storage=$(yq -r '.needs.storage // false' platform.yaml)
+          case "$size" in
+            medium) cpu=2; memory=2Gi; max=5 ;;
+            *) cpu=1; memory=1Gi; max=3 ;;
+          esac
+          {
+            echo "name=$name"
+            echo "port=$port"
+            echo "health=$health"
+            echo "cpu=$cpu"
+            echo "memory=$memory"
+            echo "max=$max"
+            echo "storage=$storage"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Public build settings from the repo's GitHub variables
+        env:
+          VARS_JSON: ${{ toJSON(vars) }}
+        run: |
+          # NEXT_PUBLIC_* and VITE_* values are baked into the app when it is
+          # built. Repo variables win over a committed .env.production.
+          jq -r 'to_entries[] | select(.key | test("^(NEXT_PUBLIC_|VITE_)")) | "\(.key)=\(.value)"' \
+            <<<"$VARS_JSON" > public.env
+          if [[ -s public.env ]]; then
+            cat public.env >> .env.production
+          fi
+
+      # Built before any cloud credentials exist on this runner, so nothing in
+      # the app's own build steps can reach them.
+      - name: Build the image
+        env:
+          IMAGE: ${{ env.REGISTRY }}/${{ steps.app.outputs.name }}:${{ github.sha }}
+        run: docker build -t "$IMAGE" .
+
+      - uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.DEPLOYER_SA }}
+
+      - uses: google-github-actions/setup-gcloud@v3
+
+      - name: Check this repo owns the app
+        env:
+          NAME: ${{ steps.app.outputs.name }}
+        run: |
+          owner=$(gcloud run services describe "$NAME" --project "$PROJECT_ID" --region "$REGION" \
+            --format 'value(metadata.labels.repo)' 2>/dev/null || true)
+          expected=$(tr '[:upper:]' '[:lower:]' <<<"${GITHUB_REPOSITORY#*/}" | tr -c 'a-z0-9_\n-' '_' | cut -c1-63)
+          if [[ -z "$owner" ]]; then
+            echo "::error::\"$NAME\" isn't hosted yet. Submit it with the Host an app form in the bizops portal first."
+            exit 1
+          fi
+          if [[ "$owner" != "$expected" ]]; then
+            echo "::error::The app name \"$NAME\" belongs to another repo ($owner). Pick a different name in platform.yaml."
+            exit 1
+          fi
+
+      - name: Push the image
+        env:
+          IMAGE: ${{ env.REGISTRY }}/${{ steps.app.outputs.name }}:${{ github.sha }}
+        run: |
+          gcloud auth configure-docker "$REGION-docker.pkg.dev" --quiet
+          docker push "$IMAGE"
+
+      - name: Copy secrets from GitHub to Secret Manager
+        id: secrets
+        env:
+          NAME: ${{ steps.app.outputs.name }}
+          SECRETS_JSON: ${{ toJSON(secrets) }}
+        run: |
+          # Only keys listed in .env.example are copied; platform-provided and
+          # public (NEXT_PUBLIC_*, VITE_*) keys are never secrets.
+          keys=$(grep -oE '^[A-Za-z_][A-Za-z0-9_]*' .env.example 2>/dev/null |
+            grep -vE '^(NEXT_PUBLIC_|VITE_)' |
+            grep -vxE 'PORT|NODE_ENV|APP_URL|STORAGE_BUCKET|GOOGLE_CLOUD_PROJECT' | sort -u || true)
+          mapping=""
+          for key in $keys; do
+            secret="$NAME--$key"
+            value=$(jq -r --arg k "$key" '.[$k] // empty' <<<"$SECRETS_JSON")
+            if [[ -n "$value" ]]; then
+              if ! gcloud secrets describe "$secret" --project "$PROJECT_ID" >/dev/null 2>&1; then
+                gcloud secrets create "$secret" --project "$PROJECT_ID" \
+                  --replication-policy user-managed --locations "$REGION" --labels "app=$NAME" >/dev/null
+              fi
+              printf '%s' "$value" | gcloud secrets versions add "$secret" --project "$PROJECT_ID" --data-file=- >/dev/null
+              # Keep only the newest version switched on.
+              gcloud secrets versions list "$secret" --project "$PROJECT_ID" --filter 'state=ENABLED' \
+                --sort-by '~createTime' --format 'value(name)' | tail -n +2 |
+                while read -r version; do
+                  gcloud secrets versions disable "$version" --secret "$secret" --project "$PROJECT_ID" >/dev/null
+                done
+            fi
+            if gcloud secrets describe "$secret" --project "$PROJECT_ID" >/dev/null 2>&1; then
+              mapping="${mapping:+$mapping,}$key=$secret:latest"
+            else
+              echo "::warning::$key is in .env.example but has no value. Add it under the repo's Settings > Secrets and variables > Actions."
+            fi
+          done
+          echo "mapping=$mapping" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy
+        env:
+          NAME: ${{ steps.app.outputs.name }}
+          IMAGE: ${{ env.REGISTRY }}/${{ steps.app.outputs.name }}:${{ github.sha }}
+          PORT: ${{ steps.app.outputs.port }}
+          HEALTH: ${{ steps.app.outputs.health }}
+          CPU: ${{ steps.app.outputs.cpu }}
+          MEMORY: ${{ steps.app.outputs.memory }}
+          MAX: ${{ steps.app.outputs.max }}
+          STORAGE: ${{ steps.app.outputs.storage }}
+          MAPPING: ${{ steps.secrets.outputs.mapping }}
+        run: |
+          url=$(gcloud run services describe "$NAME" --project "$PROJECT_ID" --region "$REGION" --format 'value(status.url)')
+          envs="APP_URL=$url|GOOGLE_CLOUD_PROJECT=$PROJECT_ID"
+          if [[ "$STORAGE" == true ]]; then
+            envs="$envs|STORAGE_BUCKET=$PROJECT_ID-$NAME"
+          fi
+          while IFS= read -r line; do
+            [[ -n "$line" ]] && envs="$envs|$line"
+          done < public.env
+
+          args=(
+            --project "$PROJECT_ID" --region "$REGION"
+            --image "$IMAGE"
+            --service-account "app-$NAME@$PROJECT_ID.iam.gserviceaccount.com"
+            --port "$PORT" --cpu "$CPU" --memory "$MEMORY"
+            --min-instances 0 --max-instances "$MAX"
+            --startup-probe "httpGet.path=$HEALTH,httpGet.port=$PORT,periodSeconds=5,failureThreshold=24"
+            --set-env-vars "^|^$envs"
+          )
+          if [[ -n "$MAPPING" ]]; then
+            args+=(--set-secrets "$MAPPING")
+          else
+            args+=(--clear-secrets)
+          fi
+          # Who can reach the app (Google sign-in) was set when it was hosted
+          # and is left as it is.
+          gcloud run deploy "$NAME" "${args[@]}"
+
+          {
+            echo "### Deployed $NAME"
+            echo
+            echo "$url (sign in with a @virtuals.io Google account)"
+          } >> "$GITHUB_STEP_SUMMARY"
