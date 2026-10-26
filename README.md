@@ -59,8 +59,27 @@ An app is one Node.js container that:
   service account
 
 Not available yet, so ask the platform team: Postgres, Redis, scheduled jobs,
-custom domains, anything bigger than `medium`. Public (no sign-in) apps need
+anything bigger than `medium`. Custom domains are set up by the platform team
+(see below). Public (no sign-in) apps need
 the platform team to add them to [`public-apps.txt`](public-apps.txt).
+
+## Custom domains
+
+An app can have its own domain (for example `support.virtuals.io`) through one
+load balancer that all such apps share, about US$18/month in total. A platform
+engineer runs:
+
+```bash
+bootstrap/add-domain.sh <app name> <domain>
+```
+
+It prints two DNS records. The first proves the domain is ours, so the HTTPS
+certificate is issued before anything changes; the second, added once the
+certificate is active, switches the domain over. After the domain works,
+`bootstrap/add-domain.sh <app name> <domain> --only-through-domain` stops the
+app answering at its run.app addresses, so all traffic comes through the load
+balancer. Apps behind it see two proxies in `X-Forwarded-For` (Express:
+`trust proxy` 2).
 
 ## Security
 
