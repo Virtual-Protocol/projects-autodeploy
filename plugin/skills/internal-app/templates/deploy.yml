@@ -1,0 +1,21 @@
+# Copy to .github/workflows/deploy.yml unchanged.
+# Builds this repo and deploys it to Cloud Run every time main changes.
+# The app must be hosted first: "Host an app" in the bizops portal.
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    permissions:
+      id-token: write   # lets GitHub prove to Google who it is; no keys stored
+      contents: read
+    uses: Virtual-Protocol/projects-autodeploy/.github/workflows/deploy-app.yml@main
+    secrets: inherit    # the deploy copies the secrets named in .env.example

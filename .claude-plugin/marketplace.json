@@ -1,0 +1,16 @@
+{
+  "name": "virtuals",
+  "owner": {
+    "name": "Virtuals Protocol"
+  },
+  "metadata": {
+    "description": "Virtuals' Claude Code plugins"
+  },
+  "plugins": [
+    {
+      "name": "virtuals-platform",
+      "source": "./plugin",
+      "description": "How to build internal apps that host on the Virtuals platform (Google Cloud Run, through projects-autodeploy): rules, templates and a checker"
+    }
+  ]
+}
