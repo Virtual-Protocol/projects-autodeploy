@@ -83,10 +83,11 @@ for role in roles/run.admin roles/iam.serviceAccountAdmin roles/iam.serviceAccou
   roles/resourcemanager.projectIamAdmin roles/iap.admin roles/storage.admin; do
   grant "serviceAccount:$PROVISIONER_SA" "$role"
 done
-# Changing an existing app's service makes Cloud Run re-read its current image,
-# which needs read access to it.
+# Hosting pushes the next-steps page (placeholder/) that new apps show until
+# their first deploy, and changing an existing app's service makes Cloud Run
+# re-read its current image.
 gcloud artifacts repositories add-iam-policy-binding "$REGISTRY" --location "$REGION" \
-  --member "serviceAccount:$PROVISIONER_SA" --role roles/artifactregistry.reader >/dev/null
+  --member "serviceAccount:$PROVISIONER_SA" --role roles/artifactregistry.writer >/dev/null
 
 step "Keyless sign-in from this repo's workflows"
 gcloud iam workload-identity-pools describe "$POOL" --location global >/dev/null 2>&1 ||

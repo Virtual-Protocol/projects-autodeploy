@@ -33,6 +33,7 @@ env:
   PROJECT_ID: virtuals-internal-apps
   PROJECT_NUMBER: "912665393140"
   REGION: asia-southeast1
+  REGISTRY: asia-southeast1-docker.pkg.dev/virtuals-internal-apps/apps
   DOMAIN: virtuals.io
   WIF_PROVIDER: projects/912665393140/locations/global/workloadIdentityPools/github/providers/autodeploy
   PROVISIONER_SA: autodeploy-provisioner@virtuals-internal-apps.iam.gserviceaccount.com
@@ -75,6 +76,13 @@ jobs:
           REQUESTED_BY: ${{ inputs.requested_by }}
         run: scripts/read-platform.sh app
 
+      # The page the app shows until its first deploy, built from this repo
+      # before any cloud credentials exist on this runner.
+      - name: Build the placeholder page
+        env:
+          IMAGE: ${{ env.REGISTRY }}/platform/placeholder:${{ github.sha }}
+        run: docker build -t "$IMAGE" placeholder
+
       - uses: google-github-actions/auth@v3
         with:
           workload_identity_provider: ${{ env.WIF_PROVIDER }}
@@ -82,11 +90,25 @@ jobs:
 
       - uses: google-github-actions/setup-gcloud@v3
 
+      # If this fails, the app shows Google's sample page instead.
+      - name: Push the placeholder page
+        id: placeholder
+        continue-on-error: true
+        env:
+          IMAGE: ${{ env.REGISTRY }}/platform/placeholder:${{ github.sha }}
+        run: |
+          gcloud auth configure-docker "$REGION-docker.pkg.dev" --quiet
+          docker push "$IMAGE"
+          echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
+
       - name: Set up the app on Google Cloud
         env:
           NAME: ${{ steps.app.outputs.name }}
           STORAGE: ${{ steps.app.outputs.storage }}
           PUBLIC: ${{ steps.app.outputs.public }}
+          SECRETS: ${{ steps.app.outputs.secrets }}
+          VARIABLES: ${{ steps.app.outputs.variables }}
+          PLACEHOLDER_IMAGE: ${{ steps.placeholder.outputs.image }}
           REPO: ${{ inputs.repo }}
           REQUESTED_BY: ${{ inputs.requested_by }}
           DATA_CLASS: ${{ inputs.data_class }}

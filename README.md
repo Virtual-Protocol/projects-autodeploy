@@ -18,7 +18,8 @@ Hosts Virtuals' internal apps on Google Cloud Run, so anyone who builds a tool
 2. **Host it.** Use the **Host an app** form in the bizops portal. It runs
    [`host-app.yml`](.github/workflows/host-app.yml), which checks the request and
    creates the app's Cloud Run service, its own service account and, if asked
-   for, a storage bucket.
+   for, a storage bucket. Until its first deploy, the app's address shows a
+   page ([`placeholder/`](placeholder)) listing what's left to do, with links.
 3. **Add its secrets** in the app repo's GitHub settings (Settings > Secrets and
    variables > Actions), using the names in its `.env.example`. Public values
    (`NEXT_PUBLIC_*`, `VITE_*`) go under Variables instead.
