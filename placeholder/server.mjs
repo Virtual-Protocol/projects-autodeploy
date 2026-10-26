@@ -15,15 +15,15 @@ const variables = names(VARIABLES)
 
 const secretsStep = secrets.length
   ? `<li>
-      <h2>Add its secrets</h2>
-      <p>The app needs these settings. On GitHub, add each one with <strong>New repository secret</strong>, using its real value:</p>
+      <h2>Check its secrets are added</h2>
+      <p>The app needs these settings on GitHub. Only the repo's admins can add them, so the platform team does: send them any missing values through a password manager share, never in chat or email.</p>
       ${codes(secrets)}
-      <a class="button" href="${repoUrl}/settings/secrets/actions">Open the secrets page</a>
+      <a class="button" href="${repoUrl}/settings/secrets/actions">Open the secrets page (admins)</a>
       ${
         variables.length
           ? `<p>These are public, so they go under the <strong>Variables</strong> tab instead:</p>
              ${codes(variables)}
-             <a class="button secondary" href="${repoUrl}/settings/variables/actions">Open the variables page</a>`
+             <a class="button secondary" href="${repoUrl}/settings/variables/actions">Open the variables page (admins)</a>`
           : ""
       }
     </li>`

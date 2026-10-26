@@ -17,16 +17,19 @@ things only they can do (see "Hand-off").
 
 ## How an app goes live
 
-1. **The code** is in a **private** repo in the `Virtual-Protocol` GitHub organization.
-2. **You add the platform files** (templates in `${CLAUDE_SKILL_DIR}/templates/`) and keep
-   the app to the rules below. `platform.yaml` names the person who will host it as `owner`.
-3. **The owner hosts it** with **Tech requests → Host an app** in the bizops portal:
-   https://bizops-912665393140.asia-southeast1.run.app/apps. It checks the repo, creates the
-   app's address, and lists the secrets to add.
-4. **The owner adds the secrets** in the repo on GitHub (Settings → Secrets and variables →
-   Actions), named as in `.env.example`.
-5. **Deploy:** merge to `main`, or run the repo's Deploy workflow (Actions tab). It takes about
-   3–5 minutes. After that, every merge to `main` deploys by itself.
+1. **Build it in a folder on the builder's computer.** No repo is needed yet. You add the
+   platform files (templates in `${CLAUDE_SKILL_DIR}/templates/`) and keep the app to the
+   rules below. `platform.yaml` names the builder, who will host it, as `owner`.
+2. **When it's ready, the platform team creates its repo**: private, in the
+   `Virtual-Protocol` GitHub organization, with the builder added. You push the code to it
+   (`main`).
+3. **The platform team adds the secrets** to the repo (only repo admins can). The builder
+   sends them the values through a password manager share, never in chat or email.
+4. **The builder hosts it** with **Tech requests → Host an app** in the bizops portal:
+   https://bizops-912665393140.asia-southeast1.run.app/apps. It checks the repo and creates
+   the app's place to run and its address, so it must come before the first deploy.
+5. **Deploy:** run the repo's Deploy workflow (Actions tab), or merge to `main`. It takes
+   about 3–5 minutes. After that, every merge to `main` deploys by itself.
 
 ## The rules
 
@@ -81,8 +84,9 @@ key, `GOOGLE_APPLICATION_CREDENTIALS`, or AWS keys.
 
 ### Settings and secrets
 - Every env var the code reads goes in `.env.example`. At each deploy, the platform copies
-  the repo's **GitHub Actions secrets** with those names into the running app. The owner adds
-  them in the repo: Settings → Secrets and variables → Actions → New repository secret.
+  the repo's **GitHub Actions secrets** with those names into the running app. Only repo
+  admins can set them, so the platform team adds them; the builder sends the values through a
+  password manager share. Never ask the user to paste a secret's value to you.
 - **GitHub is the one place to change them.** A value changed in Google Cloud is overwritten
   by the next deploy. After changing a secret, deploy again (Actions → Deploy → Run workflow).
 - **Browser-visible values** (`NEXT_PUBLIC_*`, `VITE_*`) are baked in when the app is built.
@@ -148,10 +152,11 @@ take a few seconds.
    single dashes, starting with a letter.
 2. Default stack, unless the user already has one: **Next.js (App Router) + TypeScript**,
    plus Postgres on Supabase if it needs a database.
-3. Copy the templates in. Fill in `platform.yaml` (`owner` is the user's `@virtuals.io`
-   email), add the health route, write `.env.example`, and add the `CLAUDE.md` section and
-   `.claude/settings.json`.
-4. Build the features within the rules above.
+3. Work in a folder on the user's computer and `git init` it; the repo on GitHub comes when
+   it's ready to host. Copy the templates in. Fill in `platform.yaml` (`owner` is the user's
+   `@virtuals.io` email), add the health route, write `.env.example`, and add the `CLAUDE.md`
+   section and `.claude/settings.json`.
+4. Build the features within the rules above, and run the app locally so the user can try it.
 
 ### Getting an existing app ready (including moving off Railway or Vercel)
 1. Run the checker (below) and read every error and warning.
@@ -183,15 +188,17 @@ app the way the Dockerfile does, and confirm the health check answers.
 Always end with a short **"What you need to do"** list in plain language, with only what
 applies:
 
-1. **Merge** the changes into `main` on GitHub.
-2. **First time only, host it:** in the bizops portal, open **Tech requests → Host an app**
-   (https://bizops-912665393140.asia-southeast1.run.app/apps) and enter this repo. It takes
+1. **No repo yet?** "Ask the platform team for a repository for this app (its name, and your
+   GitHub username). Once they've added you, ask me to push the app to it." Otherwise:
+   **merge** the changes into `main` on GitHub.
+2. **Secrets:** "Send the platform team these, through a password manager share (never chat or
+   email), so they can add them to the repo: `FOO` (what it is and where to get it), …". Never
+   show real values.
+3. **First time only, host it:** in the bizops portal, open **Tech requests → Host an app**
+   (https://bizops-912665393140.asia-southeast1.run.app/apps) and enter the repo. It takes
    2–3 minutes and gives the app's address.
-3. **Secrets:** "In the repo on GitHub: Settings → Secrets and variables → Actions → New
-   repository secret, add: `FOO` (what it is and where to get it), …". Never show real values.
-   The app's address lists the same names until its first deploy.
-4. **Deploy:** "Merge to `main`, or open Actions → Deploy → Run workflow. It's live about
-   5 minutes later." After the first time, every merge deploys by itself.
+4. **Deploy:** "Open Actions → Deploy → Run workflow in the repo, or merge to `main`. It's live
+   about 5 minutes later." After the first time, every merge deploys by itself.
 5. **Needs the platform team:** a database, a public app, a schedule, a custom domain, or a
    migration that drops or renames data.
 6. **Problems found:** a tracked `.env` file, secrets in code, or anything you couldn't fix.
