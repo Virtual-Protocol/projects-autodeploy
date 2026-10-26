@@ -188,11 +188,12 @@ jobs:
           fi
           # The app's bucket can also appear as a folder, for apps that save
           # files to disk. Cleared first, so removing the folder takes effect.
+          # Owned by uid 1000, the template image's "node" user (else root).
           args+=(--clear-volume-mounts --clear-volumes)
           if [[ -n "$FOLDER" ]]; then
             args+=(
               --execution-environment gen2
-              --add-volume "name=storage,type=cloud-storage,bucket=$PROJECT_ID-$NAME"
+              --add-volume "name=storage,type=cloud-storage,bucket=$PROJECT_ID-$NAME,mount-options=uid=1000;gid=1000"
               --add-volume-mount "volume=storage,mount-path=$FOLDER"
             )
           fi
