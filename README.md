@@ -71,8 +71,9 @@ It teaches Claude the rules above, carries the templates and the checker, and lo
 itself when someone builds or hosts an app. Its guide is
 [`plugin/skills/internal-app/SKILL.md`](plugin/skills/internal-app/SKILL.md).
 
-- **Builders need read access to this repo** to install it (the organization's default
-  repository permission is none).
+- **This repo is public**, so anyone can install the plugin without being given access.
+  Nothing here is secret, and nothing secret may ever be committed here: app secrets live in
+  each app repo's GitHub secrets, and the platform's in this repo's GitHub secrets.
 - **For everyone at once:** an Owner of the claude.ai organization adds this under
   Organization settings → Claude Code → Managed settings:
 
