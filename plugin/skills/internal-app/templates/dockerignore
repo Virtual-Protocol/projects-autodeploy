@@ -1,0 +1,18 @@
+# Copy to .dockerignore at the repo root.
+**/node_modules
+**/.next
+**/dist
+**/build
+**/.data
+**/uploads
+.git
+.github
+*.log
+.DS_Store
+
+# Secrets never go into the image. .env.production (public values only) is allowed.
+**/.env
+**/.env.local
+**/.env.*.local
+**/.env.development
+!.env.production

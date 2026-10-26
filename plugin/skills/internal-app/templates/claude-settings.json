@@ -1,0 +1,10 @@
+{
+  "extraKnownMarketplaces": {
+    "virtuals": {
+      "source": { "source": "github", "repo": "Virtual-Protocol/projects-autodeploy" }
+    }
+  },
+  "enabledPlugins": {
+    "virtuals-platform@virtuals": true
+  }
+}

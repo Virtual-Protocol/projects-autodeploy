@@ -13,8 +13,10 @@ Hosts Virtuals' internal apps on Google Cloud Run, so anyone who builds a tool
 
 ## How an app goes live
 
-1. **Build it to the rules below.** Claude's `virtuals-platform` plugin does this,
-   and adds the files from [`templates/app/`](templates/app).
+1. **Build it to the rules below.** Claude's `virtuals-platform` plugin
+   ([`plugin/`](plugin), see "The Claude plugin") does this, and adds the files from
+   [`templates/app/`](templates/app). The bizops portal's **Tech requests → Build an
+   app** page walks a builder through it.
 2. **Host it.** Use the **Host an app** form in the bizops portal. It runs
    [`host-app.yml`](.github/workflows/host-app.yml), which checks the request and
    creates the app's Cloud Run service, its own service account and, if asked
@@ -61,6 +63,41 @@ An app is one Node.js container that:
 Not available yet, so ask the platform team: Postgres, Redis, scheduled jobs,
 custom domains, anything bigger than `medium`. Public (no sign-in) apps need
 the platform team to add them to [`public-apps.txt`](public-apps.txt).
+
+## The Claude plugin
+
+Builders work with Claude Code and the `virtuals-platform` plugin in [`plugin/`](plugin).
+It teaches Claude the rules above, carries the templates and the checker, and loads by
+itself when someone builds or hosts an app. Its guide is
+[`plugin/skills/internal-app/SKILL.md`](plugin/skills/internal-app/SKILL.md).
+
+- **Builders need read access to this repo** to install it (the organization's default
+  repository permission is none).
+- **For everyone at once:** an Owner of the claude.ai organization adds this under
+  Organization settings → Claude Code → Managed settings:
+
+  ```json
+  {
+    "extraKnownMarketplaces": {
+      "virtuals": {
+        "source": { "source": "github", "repo": "Virtual-Protocol/projects-autodeploy" },
+        "autoUpdate": true
+      }
+    },
+    "enabledPlugins": { "virtuals-platform@virtuals": true }
+  }
+  ```
+
+- **One person:** `claude plugin marketplace add Virtual-Protocol/projects-autodeploy`, then
+  `claude plugin install virtuals-platform@virtuals`.
+- **Per app repo:** the plugin commits `.claude/settings.json`, so anyone who opens the repo
+  in Claude Code is offered the plugin.
+
+To change the rules, edit `SKILL.md` and bump `version` in
+`plugin/.claude-plugin/plugin.json`. The checker and templates live in
+[`actions/check/`](actions/check) and [`templates/app/`](templates/app); the plugin keeps
+copies, and the [Plugin in sync](.github/workflows/plugin-in-sync.yml) check fails a change
+that updates only one.
 
 ## Security
 

@@ -1,0 +1,32 @@
+# The Claude plugin (plugin/) carries copies of the checker and the app
+# templates, because a plugin can't reach files outside its own folder. This
+# fails a change that updates one copy and not the other.
+name: Plugin in sync
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  compare:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: The plugin's checker and templates match the platform's
+        run: |
+          status=0
+          check() {
+            if ! diff -q "$1" "$2" >/dev/null; then
+              echo "::error file=$2::$2 differs from $1. Copy $1 over it."
+              status=1
+            fi
+          }
+          check actions/check/check.mjs plugin/skills/internal-app/scripts/check.mjs
+          for f in platform.yaml Dockerfile dockerignore deploy.yml; do
+            check "templates/app/$f" "plugin/skills/internal-app/templates/$f"
+          done
+          exit $status
