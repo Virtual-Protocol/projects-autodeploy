@@ -76,7 +76,7 @@ if [[ "$STORAGE" == true ]]; then
 fi
 
 if [[ "$PUBLIC" == true ]]; then
-  # Approved in public-apps.txt (read-platform.sh checked). Turning off
+  # Approved in PUBLIC_APPS (read-platform.sh checked). Turning off
   # Cloud Run's invoker check opens it without granting anything to allUsers.
   step "The Cloud Run service, open to everyone"
   access=public

@@ -150,7 +150,7 @@ if (cfg) {
 
   cfg.public ??= false;
   if (typeof cfg.public !== "boolean") err("platform.yaml: public must be true or false");
-  else if (cfg.public) warn("platform.yaml: public: true opens the app to anyone, with no sign-in. Hosting refuses it unless the platform team has approved the app in public-apps.txt");
+  else if (cfg.public) warn("platform.yaml: public: true opens the app to anyone, with no sign-in. Hosting refuses it until the platform team approves the app (bizops portal: Tech help → Public apps)");
 
   cfg.needs ??= {};
   if (typeof cfg.needs !== "object") err("platform.yaml: needs must be a section (storage: true/false)");

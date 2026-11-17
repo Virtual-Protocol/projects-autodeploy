@@ -9,7 +9,7 @@ size: small             # small = 1 vCPU / 1 GB, up to 3 copies | medium = 2 vCP
 # max_copies: 1         # optional: fewer copies than the size allows, e.g. 1 for an app
                         # whose copies would clash over files in its storage folder
 # public: true          # optional: anyone on the internet can open it, with no sign-in.
-                        # Only for apps the platform team approves (public-apps.txt).
+                        # Only for apps the platform team approves in the bizops portal.
 
 needs:
   storage: false        # true -> a private Cloud Storage bucket, its name in STORAGE_BUCKET
