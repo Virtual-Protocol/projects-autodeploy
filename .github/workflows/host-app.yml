@@ -74,9 +74,6 @@ jobs:
         env:
           REPO: ${{ inputs.repo }}
           REQUESTED_BY: ${{ inputs.requested_by }}
-          # Approved public apps, edited on the bizops portal's Public apps
-          # page. Only repo admins (and the portal's token) can change it.
-          PUBLIC_APPS: ${{ vars.PUBLIC_APPS }}
         run: scripts/read-platform.sh app
 
       # The page the app shows until its first deploy, built from this repo

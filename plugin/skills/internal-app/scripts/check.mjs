@@ -120,7 +120,7 @@ if (!yamlText) {
 if (cfg) {
   const known = new Set(["name", "owner", "port", "healthcheck", "size", "max_copies", "public", "needs"]);
   for (const k of Object.keys(cfg)) {
-    if (k === "audience") warn("platform.yaml: audience isn't used. Apps are behind Google sign-in unless public: true, which needs the platform team's approval");
+    if (k === "audience") warn("platform.yaml: audience isn't used. Apps are behind Google sign-in unless public: true");
     else if (!known.has(k)) warn(`platform.yaml: unknown key "${k}" (ignored)`);
   }
 
@@ -150,7 +150,7 @@ if (cfg) {
 
   cfg.public ??= false;
   if (typeof cfg.public !== "boolean") err("platform.yaml: public must be true or false");
-  else if (cfg.public) warn("platform.yaml: public: true opens the app to anyone, with no sign-in. Hosting refuses it until the platform team approves the app (bizops portal: Tech help → Public apps)");
+  else if (cfg.public) warn("platform.yaml: public: true opens the app to anyone, with no sign-in. Only for apps built for people outside Virtuals, with their own sign-in for anything private");
 
   cfg.needs ??= {};
   if (typeof cfg.needs !== "object") err("platform.yaml: needs must be a section (storage: true/false)");

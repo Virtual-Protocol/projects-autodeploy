@@ -197,7 +197,7 @@ jobs:
               --add-volume-mount "volume=storage,mount-path=$FOLDER"
             )
           fi
-          # Who can reach the app (Google sign-in, or public if approved) was
+          # Who can reach the app (Google sign-in, or public) was
           # set when it was hosted and is left as it is.
           gcloud run deploy "$NAME" "${args[@]}"
 

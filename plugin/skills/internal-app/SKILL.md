@@ -78,9 +78,9 @@ key, `GOOGLE_APPLICATION_CREDENTIALS`, or AWS keys.
   Roles (who is an admin and so on) are the app's own business: store them in its database,
   keyed by that email.
 - **Public apps** (customers outside Virtuals, like the support portal) are the exception:
-  `public: true` in `platform.yaml` only works once the platform team approves the app. Then
-  anyone can open it, so the app needs its own sign-in for anything private. Flag it in the
-  hand-off.
+  `public: true` in `platform.yaml` lets anyone open the app, with no sign-in. Set it only when
+  the user asks for an app outside Virtuals can use; the app then needs its own sign-in for
+  anything private. Flag it in the hand-off.
 
 ### Settings and secrets
 - Every env var the code reads goes in `.env.example`. At each deploy, the platform copies
@@ -199,6 +199,6 @@ applies:
    2–3 minutes and gives the app's address.
 4. **Deploy:** "Open Actions → Deploy → Run workflow in the repo, or merge to `main`. It's live
    about 5 minutes later." After the first time, every merge deploys by itself.
-5. **Needs the platform team:** a database, a public app, a schedule, a custom domain, or a
+5. **Needs the platform team:** a database, a schedule, a custom domain, or a
    migration that drops or renames data.
 6. **Problems found:** a tracked `.env` file, secrets in code, or anything you couldn't fix.
