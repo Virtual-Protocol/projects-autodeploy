@@ -7,7 +7,7 @@ Hosts Virtuals' internal apps on Google Cloud Run, so anyone who builds a tool
 - **Who can open them:** anyone signed in with a `@virtuals.io` Google account.
   Google checks this (Identity-Aware Proxy) before a request reaches the app.
   The few apps built for the public, such as the support portal, are open to
-  everyone instead, once approved in [`public-apps.txt`](public-apps.txt).
+  everyone instead, once the platform team approves them (see "Public apps").
 - **How they deploy:** every push to the app repo's `main` builds and deploys it,
   in about 3 minutes.
 
@@ -44,7 +44,7 @@ A request is refused unless all of these hold:
 | `owner` in the repo's `platform.yaml` is the person asking | Only someone who can push to the repo could have written that |
 | The app passes [the checker](actions/check/check.mjs) | It will deploy and run as expected |
 | The app name isn't used by another repo | Names are the service's and secrets' names |
-| A `public: true` app is listed in [`public-apps.txt`](public-apps.txt) | Opening an app to the internet needs a platform engineer's review |
+| A `public: true` app is approved as public (see "Public apps") | Opening an app to the internet needs a platform engineer's say-so |
 
 Deploys check again that the app was hosted from the same repo, so one repo
 can't deploy over another's app.
@@ -66,7 +66,31 @@ An app is one Node.js container that:
 
 Not available yet, so ask the platform team: Postgres, Redis, scheduled jobs,
 custom domains, anything bigger than `medium`. Public (no sign-in) apps need
-the platform team to add them to [`public-apps.txt`](public-apps.txt).
+the platform team's approval (see "Public apps").
+
+## Public apps
+
+An app whose `platform.yaml` says `public: true` is open to anyone, with no
+Google sign-in. Hosting refuses it unless the app's name and repo are in this
+repo's `PUBLIC_APPS` Actions variable (Settings > Secrets and variables >
+Actions > Variables), a JSON list:
+
+```json
+[{ "name": "acp-ticket-cms", "repo": "acp-ticket-cms", "approvedBy": "someone@virtuals.io", "approvedAt": "2026-11-17T00:00:00Z" }]
+```
+
+- **To approve an app:** open **Tech help → Public apps** in the bizops portal (platform
+  approvers only), add the app's name and repo, then have its owner host it again with the
+  **Host an app** form. No change to this repo, no deploy. Only list apps built for the
+  public, such as a customer support page, never an internal tool.
+- **Who can change the list:** the approvers the portal names (`PUBLIC_APP_APPROVERS` in its
+  `lib/access.ts`), through the portal's GitHub token, and this repo's admins directly. GitHub's
+  organization audit log records every change.
+- **Taking approval away** stops the app being hosted as public again, but doesn't close an
+  app that is already open. The owner closes it by setting `public: false` and hosting it
+  again, which puts it behind Google sign-in. To shut it at once, a platform engineer runs
+  `gcloud run services update <app> --iap --invoker-iam-check --region asia-southeast1 --project virtuals-internal-apps`,
+  which locks everyone out until the owner hosts it again with `public: false`.
 
 ## The Claude plugin
 
