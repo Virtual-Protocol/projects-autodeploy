@@ -1,12 +1,8 @@
 #!/usr/bin/env bash
 # Reads the app's platform.yaml and checks it against the request: the person
 # asking must be the owner the repo names, which only someone who can push to
-# the repo could have written there, and a public app must be approved.
+# the repo could have written there.
 #   scripts/read-platform.sh <app dir>
-# Needs: REPO REQUESTED_BY GITHUB_OUTPUT GITHUB_STEP_SUMMARY
-# Optional: PUBLIC_APPS, the approved public apps (this repo's PUBLIC_APPS
-#   Actions variable, which the bizops portal's Public apps page edits):
-#   [{"name": "<app name>", "repo": "<repo in Virtual-Protocol>", ...}]
 set -euo pipefail
 
 dir="$1"
@@ -41,19 +37,9 @@ done
 storage=$(field .needs.storage)
 [[ "$storage" == true ]] || storage=false
 
+# The owner decides: public: true opens the app to anyone, with no sign-in.
 public=$(field .public)
-if [[ "$public" == true ]]; then
-  # Both the name and the repo must match, so approving one app doesn't let
-  # another repo take its name and be public too. A missing or broken list
-  # approves nothing.
-  jq -e --arg name "$name" --arg repo "$REPO" '
-    type == "array" and
-    any(.[]; type == "object" and .name == $name and ((.repo // "") | ascii_downcase) == ($repo | ascii_downcase))
-  ' <<<"${PUBLIC_APPS:-[]}" >/dev/null 2>&1 ||
-    fail "platform.yaml says public: true, but \"$name\" from $REPO isn't an approved public app. Public apps need the platform team's approval: ask them to approve it under Tech help → Public apps in the bizops portal, then host it again."
-else
-  public=false
-fi
+[[ "$public" == true ]] || public=false
 
 # What the owner sets on GitHub before the first deploy, named as deploy-app.yml
 # reads them from .env.example: public values are variables, the rest secrets.
