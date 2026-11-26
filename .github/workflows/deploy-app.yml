@@ -204,7 +204,7 @@ jobs:
           if [[ "$access" == public ]]; then
             audience="public: anyone can open it"
           else
-            audience="sign in with a @virtuals.io Google account"
+            audience="sign in with a @virtuals.io or @eastworlds.io Google account"
           fi
           {
             echo "### Deployed $NAME"
