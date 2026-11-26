@@ -41,7 +41,6 @@ A request is refused unless all of these hold:
 | --- | --- |
 | The repo is in `Virtual-Protocol` | The company controls who can change it |
 | The repo is private | Internal tools' code isn't public |
-| `owner` in the repo's `platform.yaml` is the person asking | Only someone who can push to the repo could have written that |
 | The app passes [the checker](actions/check/check.mjs) | It will deploy and run as expected |
 | The app name isn't used by another repo | Names are the service's and secrets' names |
 

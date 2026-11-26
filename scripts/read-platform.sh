@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Reads the app's platform.yaml and checks it against the request: the person
-# asking must be the owner the repo names, which only someone who can push to
-# the repo could have written there.
+# Reads the app's platform.yaml and checks it. Anyone at the company may host an
+# app; what it does (who can open it, public or not) comes only from this file,
+# which only someone who can push to the repo could have written.
 #   scripts/read-platform.sh <app dir>
 set -euo pipefail
 
@@ -22,12 +22,9 @@ field() { yq -r "$1 // \"\"" "$file" | tr -d '\000-\037' ; }
 
 name=$(field .name)
 owner=$(field .owner | tr '[:upper:]' '[:lower:]')
-requested=$(tr '[:upper:]' '[:lower:]' <<<"$REQUESTED_BY")
 
 [[ "$name" =~ ^[a-z][a-z0-9-]{1,22}[a-z0-9]$ && "$name" != *--* ]] ||
   fail "name in platform.yaml must be 3-24 lowercase letters, digits and single dashes."
-[[ "$owner" == "$requested" ]] ||
-  fail "platform.yaml lists \"$owner\" as the owner, but this request came from $requested. Only the owner named in the repo can host it."
 
 for need in postgres redis; do
   [[ "$(field ".needs.$need")" != true ]] ||
@@ -50,6 +47,7 @@ variables=$(grep -E '^(NEXT_PUBLIC_|VITE_)' <<<"$keys" | paste -sd, - || true)
 
 {
   echo "name=$name"
+  echo "owner=$owner"
   echo "storage=$storage"
   echo "public=$public"
   echo "secrets=$secrets"

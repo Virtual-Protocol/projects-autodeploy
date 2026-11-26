@@ -2,7 +2,7 @@
 # Creates what one app needs on Google Cloud, so its repo can deploy. Runs in
 # host-app.yml after the request and platform.yaml checks. Safe to re-run.
 #
-# Needs: NAME REPO REQUESTED_BY DATA_CLASS STORAGE PUBLIC SECRETS VARIABLES
+# Needs: NAME OWNER REPO DATA_CLASS STORAGE PUBLIC SECRETS VARIABLES
 #        PROJECT_ID PROJECT_NUMBER REGION DOMAINS DEPLOYER_SA
 # Optional: PLACEHOLDER_IMAGE, the next-steps page (placeholder/) to show
 #        until the first deploy; Google's sample page without it.
@@ -18,7 +18,7 @@ placeholder_env="^|^APP_NAME=$NAME|REPO=$REPO|SECRETS=$SECRETS|VARIABLES=$VARIAB
 # Label values: lowercase letters, digits, _ and -, at most 63 characters.
 label() { tr '[:upper:]' '[:lower:]' <<<"$1" | tr -c 'a-z0-9_\n-' '_' | cut -c1-63; }
 repo_label=$(label "$REPO")
-owner_label=$(label "${REQUESTED_BY%@*}")
+owner_label=$(label "${OWNER%@*}")
 
 fail() {
   echo "::error::$1"
@@ -56,7 +56,7 @@ fi
 step "The account the app runs as"
 gcloud iam service-accounts describe "$RUN_SA" --project "$PROJECT_ID" >/dev/null 2>&1 ||
   gcloud iam service-accounts create "app-$NAME" --project "$PROJECT_ID" \
-    --display-name "$NAME (runs the app)" --description "Virtual-Protocol/$REPO, owner $REQUESTED_BY"
+    --display-name "$NAME (runs the app)" --description "Virtual-Protocol/$REPO, owner $OWNER"
 # GitHub deploys may run the app as this account.
 retry gcloud iam service-accounts add-iam-policy-binding "$RUN_SA" --project "$PROJECT_ID" \
   --member "serviceAccount:$DEPLOYER_SA" --role roles/iam.serviceAccountUser >/dev/null
