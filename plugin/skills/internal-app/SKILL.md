@@ -19,7 +19,7 @@ things only they can do (see "Hand-off").
 
 1. **Build it in a folder on the builder's computer.** No repo is needed yet. You add the
    platform files (templates in `${CLAUDE_SKILL_DIR}/templates/`) and keep the app to the
-   rules below. `platform.yaml` names the builder, who will host it, as `owner`.
+   rules below. `platform.yaml` names the builder as `owner`.
 2. **When it's ready, the platform team creates its repo**: private, in the
    `Virtual-Protocol` GitHub organization, with the builder added. You push the code to it
    (`main`).
