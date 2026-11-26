@@ -67,7 +67,7 @@ account automatically: Google's client libraries find it. **Never** add a servic
 key, `GOOGLE_APPLICATION_CREDENTIALS`, or AWS keys.
 
 ### Who can open it, and knowing who's signed in
-- **By default, only people signed in with a `@virtuals.io` Google account can open the app.**
+- **By default, only people signed in with a `@virtuals.io` or `@eastworlds.io` Google account can open the app.**
   Google checks this before any request reaches it. **Don't build a login page, passwords or
   an admin password.**
 - To know who is using it, read the email from the `x-goog-iap-jwt-assertion` header Google
@@ -154,7 +154,7 @@ take a few seconds.
    plus Postgres on Supabase if it needs a database.
 3. Work in a folder on the user's computer and `git init` it; the repo on GitHub comes when
    it's ready to host. Copy the templates in. Fill in `platform.yaml` (`owner` is the user's
-   `@virtuals.io` email), add the health route, write `.env.example`, and add the `CLAUDE.md`
+   `@virtuals.io` or `@eastworlds.io` email), add the health route, write `.env.example`, and add the `CLAUDE.md`
    section and `.claude/settings.json`.
 4. Build the features within the rules above, and run the app locally so the user can try it.
 

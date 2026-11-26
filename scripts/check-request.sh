@@ -14,8 +14,8 @@ fail() {
 
 [[ "$REPO" =~ ^[A-Za-z0-9._-]{1,100}$ ]] ||
   fail "That isn't a repository name. Give just the name, like internal-bizops-tool."
-[[ "$REQUESTED_BY" =~ ^[A-Za-z0-9._%+-]+@virtuals\.io$ ]] ||
-  fail "Requests must come from a @virtuals.io address."
+[[ "$REQUESTED_BY" =~ ^[A-Za-z0-9._%+-]+@(virtuals\.io|eastworlds\.io)$ ]] ||
+  fail "Requests must come from a @virtuals.io or @eastworlds.io address."
 
 info=$(gh api "repos/$ORG/$REPO" 2>/dev/null) ||
   fail "There's no repository called $REPO in $ORG. If it's under someone's own GitHub account, move it into $ORG first."

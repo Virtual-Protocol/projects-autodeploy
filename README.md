@@ -4,7 +4,7 @@ Hosts Virtuals' internal apps on Google Cloud Run, so anyone who builds a tool
 (usually with Claude) can put it online without touching Google Cloud.
 
 - **Where apps run:** Cloud Run in `asia-southeast1`, project `virtuals-internal-apps`.
-- **Who can open them:** anyone signed in with a `@virtuals.io` Google account.
+- **Who can open them:** anyone signed in with a `@virtuals.io` or `@eastworlds.io` Google account.
   Google checks this (Identity-Aware Proxy) before a request reaches the app.
   The few apps built for the public, such as the support portal, are open to
   everyone instead, when their `platform.yaml` says so (see "Public apps").

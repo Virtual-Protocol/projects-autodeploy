@@ -3,7 +3,7 @@
 # host-app.yml after the request and platform.yaml checks. Safe to re-run.
 #
 # Needs: NAME REPO REQUESTED_BY DATA_CLASS STORAGE PUBLIC SECRETS VARIABLES
-#        PROJECT_ID PROJECT_NUMBER REGION DOMAIN DEPLOYER_SA
+#        PROJECT_ID PROJECT_NUMBER REGION DOMAINS DEPLOYER_SA
 # Optional: PLACEHOLDER_IMAGE, the next-steps page (placeholder/) to show
 #        until the first deploy; Google's sample page without it.
 set -euo pipefail
@@ -86,7 +86,7 @@ else
   step "The Cloud Run service, behind Google sign-in"
   access=company
   access_flags=(--iap --invoker-iam-check)
-  audience="anyone with a @$DOMAIN Google account"
+  audience="anyone with a $(sed 's/^/@/; s/ / or @/g' <<<"$DOMAINS") Google account"
 fi
 labels="managed-by=projects-autodeploy,repo=$repo_label,owner=$owner_label,data=$DATA_CLASS,access=$access"
 if [[ "$exists" == false ]]; then
@@ -111,9 +111,11 @@ if [[ "$PUBLIC" != true ]]; then
   gcloud run services add-iam-policy-binding "$NAME" --project "$PROJECT_ID" --region "$REGION" \
     --member "serviceAccount:service-$PROJECT_NUMBER@gcp-sa-iap.iam.gserviceaccount.com" \
     --role roles/run.invoker >/dev/null
-  gcloud iap web add-iam-policy-binding --project "$PROJECT_ID" --region "$REGION" \
-    --resource-type cloud-run --service "$NAME" \
-    --member "domain:$DOMAIN" --role roles/iap.httpsResourceAccessor >/dev/null
+  for domain in $DOMAINS; do
+    gcloud iap web add-iam-policy-binding --project "$PROJECT_ID" --region "$REGION" \
+      --resource-type cloud-run --service "$NAME" \
+      --member "domain:$domain" --role roles/iap.httpsResourceAccessor >/dev/null
+  done
 fi
 
 url=$(gcloud run services describe "$NAME" --project "$PROJECT_ID" --region "$REGION" --format 'value(status.url)')

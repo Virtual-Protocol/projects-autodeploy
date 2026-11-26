@@ -130,7 +130,7 @@ if (cfg) {
   else if (name === "my-app") err('platform.yaml: name is still the template value "my-app"');
 
   const owner = String(cfg.owner ?? "");
-  if (!/^[^@\s]+@virtuals\.io$/.test(owner)) err(`platform.yaml: owner "${owner}" must be a @virtuals.io email`);
+  if (!/^[^@\s]+@(virtuals\.io|eastworlds\.io)$/.test(owner)) err(`platform.yaml: owner "${owner}" must be a @virtuals.io or @eastworlds.io email`);
   else if (owner === "someone@virtuals.io") err("platform.yaml: owner is still the template value");
 
   cfg.port ??= 3000;

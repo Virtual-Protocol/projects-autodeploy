@@ -34,7 +34,8 @@ env:
   PROJECT_NUMBER: "912665393140"
   REGION: asia-southeast1
   REGISTRY: asia-southeast1-docker.pkg.dev/virtuals-internal-apps/apps
-  DOMAIN: virtuals.io
+  # Google Workspace domains whose accounts can open apps behind Google sign-in.
+  DOMAINS: virtuals.io eastworlds.io
   WIF_PROVIDER: projects/912665393140/locations/global/workloadIdentityPools/github/providers/autodeploy
   PROVISIONER_SA: autodeploy-provisioner@virtuals-internal-apps.iam.gserviceaccount.com
   DEPLOYER_SA: autodeploy-deployer@virtuals-internal-apps.iam.gserviceaccount.com
